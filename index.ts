@@ -18,7 +18,7 @@ app.use("/", routes);
 app.use(errorHandler);
 
 const { API_PORT, PORT } = process.env;
-const port = PORT || API_PORT;
+const port = API_PORT || PORT;
 
 server.listen(port, () => {
   console.log(`⚡️[server]: Server is running at http://localhost:${port}`);

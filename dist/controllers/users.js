@@ -12,67 +12,74 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.deleteUsers = exports.editUsers = exports.setUsers = exports.getUsers = void 0;
+exports.generateToken = exports.getME = exports.loginUser = exports.registerUser = void 0;
 const usersModel_1 = __importDefault(require("../model/usersModel"));
+const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
+const bcryptjs_1 = __importDefault(require("bcryptjs"));
+const express_async_handler_1 = __importDefault(require("express-async-handler"));
 const User = usersModel_1.default;
-// @desc    get users
-// @route   GET /users
-// @access   Private
-const getUsers = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const users = yield User.find();
-    res.status(200).send(users);
-});
-exports.getUsers = getUsers;
-// @desc    create user
-// @route   POST /users
-// @access   Private
-const setUsers = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    if (req.body.text) {
-        User.schema;
-        const createdUser = yield User.create(new User({ text: req.body.text }));
-        res.status(200).send(createdUser);
+// @desc    register user
+// @route   POST /users/register
+// @access  Public
+exports.registerUser = (0, express_async_handler_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { name, email, password } = req.body;
+    if (!name || !email || !password) {
+        res.status(400);
+        throw new Error("add the fileds pls ");
+    }
+    const userExists = yield User.findOne({ email });
+    if (userExists) {
+        res.status(400);
+        throw new Error("user alrady exist");
+    }
+    const salt = yield bcryptjs_1.default.genSalt(10);
+    const hashedPassword = yield bcryptjs_1.default.hash(password, salt);
+    const user = yield User.create({
+        name,
+        email,
+        password: hashedPassword,
+    });
+    if (user) {
+        res.status(201).json({
+            _id: user.id,
+            name: user.name,
+            email: user.email,
+            token: (0, exports.generateToken)(user.id),
+        });
     }
     else {
         res.status(400);
-        throw new Error("pls add name prop to it");
+        throw new Error("invalid user data");
     }
-});
-exports.setUsers = setUsers;
-// @desc    edit user
-// @route   PUT /users/:id
-// @access   Private
-const editUsers = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const user = yield User.findById(req.params.id);
-    if (!user) {
+}));
+// @desc    Authrnticate a user
+// @route   POST /users/login
+// @access  Public
+exports.loginUser = (0, express_async_handler_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { email, password } = req.body;
+    const user = yield User.findOne({ email });
+    if (user && (yield bcryptjs_1.default.compare(password, user.password))) {
+        res.status(200).json({
+            _id: user.id,
+            name: user.name,
+            email: user.email,
+            token: (0, exports.generateToken)(user.id),
+        });
+    }
+    else {
         res.status(400);
-        throw new Error("Error Cant Update");
+        throw new Error("invalid credentials");
     }
-    if (!req.body.text) {
-        res.status(400);
-        throw new Error("you must add text");
-    }
-    const updatedItem = yield User.findByIdAndUpdate(req.params.id, req.body, {
-        new: true,
+}));
+// @desc    register user
+// @route   GET /users
+// @access  Private
+exports.getME = (0, express_async_handler_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    res.json(req.body.authUser);
+}));
+const generateToken = (id) => {
+    return jsonwebtoken_1.default.sign({ id }, process.env.JWT_SECRET, {
+        expiresIn: "30d",
     });
-    res.status(200).send(updatedItem);
-});
-exports.editUsers = editUsers;
-// @desc    delete user
-// @route   DELETE /users/:id
-// @access   Private
-const deleteUsers = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    try {
-        const user = yield User.findById(req.params.id);
-        if (!user) {
-            res.status(400);
-            throw new Error("Error Cant Update");
-        }
-        yield User.findByIdAndRemove(req.params.id);
-        res.send(`delete user ${req.params.id}`);
-    }
-    catch (error) {
-        res.status(400);
-        throw new Error("dose not exist");
-    }
-});
-exports.deleteUsers = deleteUsers;
+};
+exports.generateToken = generateToken;

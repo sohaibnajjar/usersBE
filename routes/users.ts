@@ -1,17 +1,9 @@
 import express from "express";
-import {
-  getUsers,
-  setUsers,
-  editUsers,
-  deleteUsers,
-} from "../controllers/users";
+import { getME, loginUser, registerUser } from "../controllers/users";
+import { protect } from "../middleware/authMiddleware";
 
 export const usersRoutes = express.Router();
 
-usersRoutes.get("/", getUsers);
-
-usersRoutes.post("/", setUsers);
-
-usersRoutes.put("/:id", editUsers);
-
-usersRoutes.delete("/:id", deleteUsers);
+usersRoutes.route("/").get(protect, getME).post(registerUser);
+usersRoutes.route("/login").post(loginUser);
+// usersRoutes.route("/:id").put(editUsers).delete(deleteUsers);
